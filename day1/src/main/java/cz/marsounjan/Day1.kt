@@ -61,7 +61,7 @@ class Day1{
 }
 
 fun main(args: Array<String>) {
-    val puzzle = Day1_A()
+    val puzzle = Day1()
     println("Puzzle output Part 1: ${puzzle.partOne()}")
     println("Puzzle output Part 2: ${puzzle.partTwo()}")
 }
