@@ -3,7 +3,7 @@ package cz.marsounjan
 import java.io.File
 import java.nio.charset.StandardCharsets.UTF_8
 
-class Day1_A{
+class Day1{
 
     private val puzzleInput = File("./day1/input.txt")
     private val puzzleInputString by lazy{
