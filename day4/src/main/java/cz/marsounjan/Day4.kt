@@ -36,7 +36,19 @@ class Day4 {
     }
 
     fun partTwo(): Int {
-        return 0
+        var firstRange : IntRange
+        var secondRange : IntRange
+        return elvenRanges.map {
+            firstRange = it[0]
+            secondRange = it[1]
+
+            when {
+                firstRange.any { secondRange.contains(it) } -> 1
+                secondRange.any { firstRange.contains(it) } -> 1
+                else -> 0
+            }
+        }
+            .sum()
     }
 
 }
