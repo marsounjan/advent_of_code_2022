@@ -10,58 +10,33 @@ class Day4 {
         puzzleInput.readBytes().toString(UTF_8)
     }
 
-    fun priorityOfItem(itemType: Char): Int {
-        var i = 'a'
-        var priority = 1
-        while (i <= 'z') {
-            if (itemType == i) {
-                return priority
+    private val elvenRanges by lazy {
+        puzzleInputString.lines()
+            .map { it.split(",")
+                .map { it.split("-") }
+                .map { it.map { it.toInt() } }
+                .map { it[0] .. it[1] }
             }
-            i++
-            priority++
-        }
-
-        i = 'A'
-        while (i <= 'Z') {
-            if (itemType == i) {
-                return priority
-            }
-            i++
-            priority++
-        }
-
-        throw IllegalStateException("invalid char $itemType")
     }
 
     fun partOne(): Int {
-        return puzzleInputString.lines()
-            .map {
-                it.substring(0 until it.length / 2) to it.substring(it.length / 2 until it.length)
+        var firstRange : IntRange
+        var secondRange : IntRange
+        return elvenRanges.map {
+            firstRange = it[0]
+            secondRange = it[1]
+
+            when {
+                firstRange.all { secondRange.contains(it) } -> 1
+                secondRange.all { firstRange.contains(it) } -> 1
+                else -> 0
             }
-            .map { (compartment1, compartment2) ->
-                compartment1.asIterable()
-                    .intersect(compartment2.asIterable())
-                    .first()
-            }
-            .map { errorItemType ->
-                priorityOfItem(errorItemType)
-            }
+        }
             .sum()
     }
 
     fun partTwo(): Int {
-        return puzzleInputString.lines()
-            .chunked(3)
-            .map {(first, second, third) ->
-            first.asIterable()
-                .intersect(second.asIterable())
-                .intersect(third.asIterable())
-                .first()
-            }
-            .map { errorItemType ->
-                priorityOfItem(errorItemType)
-            }
-            .sum()
+        return 0
     }
 
 }
