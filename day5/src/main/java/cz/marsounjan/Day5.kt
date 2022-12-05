@@ -55,8 +55,17 @@ class Day5 {
         return crates.map { it.last() }.joinToString(separator = "")
     }
 
-    fun partTwo(): Int {
-        return 0
+    fun partTwo(): String {
+        val crates = crates()
+        val moves = moves()
+        moves.forEach { (amount, from, to) ->
+            val temp = mutableListOf<String>()
+            (0 until amount).forEach {
+                temp.add(crates[from-1].removeLast())
+            }
+            crates[to-1].addAll(temp.reversed())
+        }
+        return crates.map { it.last() }.joinToString(separator = "")
     }
 
 }
