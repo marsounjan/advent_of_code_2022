@@ -10,8 +10,83 @@ class Day8 {
         puzzleInput.readBytes().toString(UTF_8)
     }
 
-    fun partOne(): Long {
-        return 0
+    data class Tree(
+        val x: Int,
+        val y: Int,
+        val legth: Int
+    )
+
+    val grid: List<List<Tree>> by lazy {
+        val inputLines = puzzleInputString.lines()
+        inputLines.mapIndexed { y, line ->
+            line.mapIndexed { x, tree ->
+                Tree(
+                    x = x,
+                    y = y,
+                    legth = tree.digitToInt()
+                )
+            }
+        }
+    }
+
+    fun findVisibleTree(
+        coordinateLine : List<Pair<Int, Int>>
+    ): List<Tree> {
+        val visibleTrees = mutableListOf<Tree>()
+        var tallest: Tree? = null
+        var current : Tree
+
+        coordinateLine.forEach { (x , y)->
+            current = grid[y][x]
+            when {
+                tallest == null -> {
+                    tallest = current
+                    visibleTrees.add(current)
+                }
+                else -> {
+                    if (tallest!!.legth < current.legth) {
+                        tallest = current
+                        visibleTrees.add(current)
+                    }
+                }
+            }
+        }
+
+        return visibleTrees
+    }
+
+    fun partOne(): Int {
+        val height = grid.size
+        val width = grid.first().size
+        val visibleTrees = hashSetOf<Tree>()
+
+        val horizontalLines = (0 until height).map { y ->
+            (0 until width).map { x ->
+                Pair(x, y)
+            }
+        }
+        val horizontalLinesReversed = (0 until height).map { y ->
+            (width - 1 downTo 0).map { x ->
+                Pair(x, y)
+            }
+        }
+
+        val verticalLines = (0 until width).map { x ->
+            (0 until height).map { y ->
+                Pair(x, y)
+            }
+        }
+        val verticalLinesReversed = (0 until width).map { x ->
+            (height - 1 downTo 0).map { y ->
+                Pair(x, y)
+            }
+        }
+
+        horizontalLines.forEach { line -> visibleTrees.addAll(findVisibleTree(line)) }
+        horizontalLinesReversed.forEach { line -> visibleTrees.addAll(findVisibleTree(line)) }
+        verticalLines.forEach { line -> visibleTrees.addAll(findVisibleTree(line)) }
+        verticalLinesReversed.forEach { line -> visibleTrees.addAll(findVisibleTree(line)) }
+        return visibleTrees.size
     }
 
     fun partTwo(): Int {
