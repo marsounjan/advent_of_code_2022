@@ -29,20 +29,21 @@ class Day8 {
         }
     }
 
-    fun findVisibleTree(
-        coordinateLine : List<Pair<Int, Int>>
+    fun findVisibleTreeCount(
+        coordinateLine: List<Pair<Int, Int>>
     ): List<Tree> {
         val visibleTrees = mutableListOf<Tree>()
         var tallest: Tree? = null
-        var current : Tree
+        var current: Tree
 
-        coordinateLine.forEach { (x , y)->
+        coordinateLine.forEach { (x, y) ->
             current = grid[y][x]
             when {
                 tallest == null -> {
                     tallest = current
                     visibleTrees.add(current)
                 }
+
                 else -> {
                     if (tallest!!.legth < current.legth) {
                         tallest = current
@@ -82,15 +83,67 @@ class Day8 {
             }
         }
 
-        horizontalLines.forEach { line -> visibleTrees.addAll(findVisibleTree(line)) }
-        horizontalLinesReversed.forEach { line -> visibleTrees.addAll(findVisibleTree(line)) }
-        verticalLines.forEach { line -> visibleTrees.addAll(findVisibleTree(line)) }
-        verticalLinesReversed.forEach { line -> visibleTrees.addAll(findVisibleTree(line)) }
+        horizontalLines.forEach { line -> visibleTrees.addAll(findVisibleTreeCount(line)) }
+        horizontalLinesReversed.forEach { line -> visibleTrees.addAll(findVisibleTreeCount(line)) }
+        verticalLines.forEach { line -> visibleTrees.addAll(findVisibleTreeCount(line)) }
+        verticalLinesReversed.forEach { line -> visibleTrees.addAll(findVisibleTreeCount(line)) }
         return visibleTrees.size
     }
 
+    fun findLowerTreeCount(
+        baseline: Tree,
+        coordinateLine: List<Pair<Int, Int>>
+    ): List<Tree> {
+        val visibleTrees = mutableListOf<Tree>()
+        var current: Tree
+
+        coordinateLine.forEach { (x, y) ->
+            current = grid[y][x]
+            when {
+                else -> {
+                    when {
+                        baseline.legth > current.legth -> visibleTrees.add(current)
+                        baseline.legth == current.legth -> {
+                            visibleTrees.add(current)
+                            return visibleTrees
+                        }
+                    }
+                }
+            }
+        }
+
+        return visibleTrees
+    }
+
     fun partTwo(): Int {
-        return 0
+        val height = grid.size
+        val width = grid.first().size
+
+        var highestTreeScore = 0
+
+        (0 until width).forEach { x ->
+            (0 until height).forEach { y ->
+                val tree = grid[y][x]
+                val left = (x - 1 downTo 0).map { x -> Pair(x, y) }
+                val right = (x +1 until width).map { x -> Pair(x, y) }
+                val up = (y - 1 downTo 0).map { y -> Pair(x, y) }
+                val down = (y + 1 until height).map { y -> Pair(x, y) }
+
+                val lt = findLowerTreeCount(tree, left).size
+                val rt =findLowerTreeCount(tree, right).size
+                val ut = findLowerTreeCount(tree, up).size
+                val bt = findLowerTreeCount(tree, down).size
+
+                val score = lt * rt * ut * bt
+
+                if(highestTreeScore < score){
+                    highestTreeScore = score
+                }
+
+            }
+        }
+
+        return highestTreeScore
     }
 
 }
