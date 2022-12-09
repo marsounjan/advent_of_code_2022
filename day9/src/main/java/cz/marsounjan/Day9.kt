@@ -14,18 +14,21 @@ class Day9 {
     sealed class Move {
 
         abstract val steps: Int
-        abstract fun newPosition(pos : Position) : Position
+        abstract fun newPosition(pos: Position): Position
 
-        data class Up(override val steps: Int) : Move(){
+        data class Up(override val steps: Int) : Move() {
             override fun newPosition(pos: Position): Position = pos.copy(y = pos.y + 1)
         }
-        data class Down(override val steps: Int) : Move(){
+
+        data class Down(override val steps: Int) : Move() {
             override fun newPosition(pos: Position): Position = pos.copy(y = pos.y - 1)
         }
-        data class Left(override val steps: Int) : Move(){
+
+        data class Left(override val steps: Int) : Move() {
             override fun newPosition(pos: Position): Position = pos.copy(x = pos.x - 1)
         }
-        data class Right(override val steps: Int) : Move(){
+
+        data class Right(override val steps: Int) : Move() {
             override fun newPosition(pos: Position): Position = pos.copy(x = pos.x + 1)
         }
     }
@@ -44,45 +47,75 @@ class Day9 {
             }
     }
 
-    data class Position(val x : Int, val y : Int)
+    data class Position(val x: Int, val y: Int)
     data class RopeState(
-        val head : Position,
-        val tail : Position
+        val knots: List<Position>
     )
 
-    fun move(
-        rope : RopeState,
-        move : Move
-    ) : RopeState{
-        val newHead = move.newPosition(rope.head)
-
-        val newTail = when{
-            //we don't move
-            (newHead.y - rope.tail.y).absoluteValue <= 1 && (newHead.x - rope.tail.x).absoluteValue <= 1 -> rope.tail
-            //move vertically
-            newHead.x == rope.tail.x -> move.newPosition(rope.tail)
-            //move horizontally
-            newHead.y == rope.tail.y -> move.newPosition(rope.tail)
-            //move diagonally
-            else -> if((newHead.x - rope.tail.x).absoluteValue > 1){
-                move.newPosition(rope.tail.copy(y = newHead.y))
-            } else {
-                move.newPosition(rope.tail.copy(x = newHead.x))
-            }
+    fun moveTailInDirection(head: Int, tail: Int): Int {
+        return if (head > tail + 1) {
+            tail + 1
+        } else if (head < tail - 1) {
+            tail - 1
+        } else {
+            tail
         }
+    }
 
+    fun moveTail(
+        head: Position,
+        tail: Position
+    ): Position {
+        return when {
+            //don't move
+            (head.y - tail.y).absoluteValue <= 1 && (head.x - tail.x).absoluteValue <= 1 -> tail
+            //move vertically
+            head.x == tail.x -> tail.copy(y = moveTailInDirection(head = head.y, tail.y))
+            //move horizontally
+            head.y == tail.y -> tail.copy(x = moveTailInDirection(head = head.x, tail.x))
+            //move diagonally
+            (head.x == tail.x + 1 || head.x == tail.x - 1) && (head.y == tail.y + 2 || head.y == tail.y - 2) ->
+                Position(
+                    x = head.x,
+                    y = moveTailInDirection(head = head.y, tail.y)
+                )
+            (head.x == tail.x + 2 || head.x == tail.x - 2) && (head.y == tail.y + 1 || head.y == tail.y - 1) ->
+                Position(
+                    x = moveTailInDirection(head = head.x, tail.x),
+                    y = head.y
+                )
+            //move diagonally longest move (just in part 2)
+            else -> Position(
+                x = moveTailInDirection(head = head.x, tail.x),
+                y = moveTailInDirection(head = head.y, tail.y)
+            )
+        }
+    }
+
+    fun move(
+        rope: RopeState,
+        move: Move
+    ): RopeState {
         return RopeState(
-            head = newHead,
-            tail = newTail
+            knots = mutableListOf<Position>().apply {
+                rope.knots.forEachIndexed { index, knot ->
+                    if (index == 0) {
+                        add(move.newPosition(knot))
+                    } else {
+                        add(
+                            moveTail(
+                                head = last(),
+                                tail = knot
+                            )
+                        )
+                    }
+                }
+            }
         )
     }
 
-    val ropePositions : List<RopeState> by lazy{
-        var current = RopeState(
-            head = Position(0, 0),
-            tail = Position(0,0)
-        )
-
+    fun newRopePositions(initialRopeState: RopeState): List<RopeState> {
+        var current = initialRopeState
         val positions = mutableListOf(current)
 
         moves.forEach { m ->
@@ -92,18 +125,25 @@ class Day9 {
             }
         }
 
-        positions
+        return positions
     }
 
     fun partOne(): Int {
-        return ropePositions
-            .map { it.tail }
+        return newRopePositions(
+            RopeState((0 until 2).map { Position(0, 0) })
+        )
+            .map { it.knots.last() }
             .toSet()
             .size
     }
 
     fun partTwo(): Int {
-        return 0
+        return newRopePositions(
+            RopeState((0 until 10).map { Position(0, 0) })
+        )
+            .map { it.knots.last() }
+            .toSet()
+            .size
     }
 
 }
