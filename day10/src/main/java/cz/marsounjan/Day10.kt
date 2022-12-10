@@ -98,8 +98,18 @@ class Day10 {
             .sumOf { it.signal }
     }
 
-    fun partTwo(): Int {
-        return 0
+    fun partTwo(): String {
+        val pixels = getCycles()
+            .map {
+                when {
+                    it.num.mod(40) in it.x until it.x + 3 ->"#"
+                    else -> "."
+                }
+            }
+
+                return "\n" + pixels.chunked(40)
+                    .map { it.joinToString(separator = "") }
+                    .joinToString(separator = "\n")
     }
 
 }
