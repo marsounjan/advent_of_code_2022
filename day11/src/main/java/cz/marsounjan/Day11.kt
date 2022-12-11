@@ -1,8 +1,8 @@
 package cz.marsounjan
 
 import java.io.File
+import java.math.BigInteger
 import java.nio.charset.StandardCharsets.UTF_8
-import kotlin.math.floor
 
 class Day11 {
 
@@ -11,36 +11,75 @@ class Day11 {
         puzzleInput.readBytes().toString(UTF_8)
     }
 
-    data class Item(
-        var worryLevel: Int
-    )
-
-    class Monkey(
-        val operation: (Int) -> Int,
-        val test: (Item) -> Boolean,
-        val action_true: (Item) -> Unit,
-        val action_false: (Item) -> Unit,
-        vararg initialItems: Int
+    class Item(
+        val worryLevel: Int,
+        private val monkeys: List<Monkey>
     ) {
 
-        val items = mutableListOf<Item>().apply {
-            addAll(initialItems.map { Item(it) })
+        var worryLevelReminders = IntArray(monkeys.size)
+            private set
+
+        fun monkeyPlayWithItem(operation: (Int) -> Int): Item =
+            Item(
+                worryLevel = operation(worryLevel),
+                monkeys = monkeys
+            )
+                .apply {
+                    this.worryLevelReminders = this@Item.worryLevelReminders
+                        .mapIndexed { index, i ->
+                            monkeys[index].test_mod(operation(i))
+                        }.toIntArray()
+                }
+
+        init {
+            monkeys.forEachIndexed { index, monkey ->
+                worryLevelReminders[index] = monkey.test_mod(worryLevel)
+            }
         }
 
-        var inspectedItemCount: Int = 0
+    }
+
+    class Monkey(
+        val index: Int,
+        val operation: (Int) -> Int,
+        val test_mod: (Int) -> Int,
+        val action_true: (Item) -> Unit,
+        val action_false: (Item) -> Unit
+    ) {
+
+        val items = mutableListOf<Item>()
+
+        fun addInitialItems(monkeys: List<Monkey>, vararg item: Int) {
+            item.forEach {
+                items.add(
+                    Item(
+                        worryLevel = it,
+                        monkeys = monkeys
+                    )
+                )
+            }
+        }
+
+        var inspectedItemCount: BigInteger = 0.toBigInteger()
 
         fun catch(item: Item) {
             items.add(item)
         }
 
-        fun round() {
+        fun round(worryLevelDivider: Int) {
             var item = items.removeFirstOrNull()
+            var newItem: Item
             while (item != null) {
-                item.worryLevel = floor(operation(item.worryLevel) / 3f).toInt()
-                if (test(item)) {
-                    action_true(item)
+                newItem = item.monkeyPlayWithItem(operation)
+                /*newItem = Item(
+                    worryLevel = operation(item.worryLevel) / worryLevelDivider,
+                    monkeys = allMonkeys
+                )*/
+
+                if (newItem.worryLevelReminders[index] == 0) {
+                    action_true(newItem)
                 } else {
-                    action_false(item)
+                    action_false(newItem)
                 }
 
                 inspectedItemCount++
@@ -50,124 +89,113 @@ class Day11 {
 
     }
 
-    /**
-     * Monkey 0:
-     *   Starting items: 83, 97, 95, 67
-     *   Operation: new = old * 19
-     *   Test: divisible by 17
-     *     If true: throw to monkey 2
-     *     If false: throw to monkey 7
-     *
-     * Monkey 1:
-     *   Starting items: 71, 70, 79, 88, 56, 70
-     *   Operation: new = old + 2
-     *   Test: divisible by 19
-     *     If true: throw to monkey 7
-     *     If false: throw to monkey 0
-     *
-     * Monkey 2:
-     *   Starting items: 98, 51, 51, 63, 80, 85, 84, 95
-     *   Operation: new = old + 7
-     *   Test: divisible by 7
-     *     If true: throw to monkey 4
-     *     If false: throw to monkey 3
-     *
-     * Monkey 3:
-     *   Starting items: 77, 90, 82, 80, 79
-     *   Operation: new = old + 1
-     *   Test: divisible by 11
-     *     If true: throw to monkey 6
-     *     If false: throw to monkey 4
-     *
-     * Monkey 4:
-     *   Starting items: 68
-     *   Operation: new = old * 5
-     *   Test: divisible by 13
-     *     If true: throw to monkey 6
-     *     If false: throw to monkey 5
-     *
-
-     * Monkey 7:
-     *   Starting items: 98, 81, 63, 65, 84, 71, 84
-     *   Operation: new = old + 3
-     *   Test: divisible by 2
-     *     If true: throw to monkey 2
-     *     If false: throw to monkey 3
-     */
-
     val monkeys: List<Monkey>
         get() = mutableListOf<Monkey>().apply {
             // 0
-            add(Monkey(
-                operation = { it * 19 },
-                test = { it.worryLevel.mod(17) == 0 },
-                action_true = { item -> this[2].catch(item) },
-                action_false = { item -> this[7].catch(item) },
-                83, 97, 95, 67
-            ))
+            add(
+                Monkey(
+                    index = 0,
+                    operation = { it * 19 },
+                    test_mod = { it.mod(17) },
+                    action_true = { item -> this[2].catch(item) },
+                    action_false = { item -> this[7].catch(item) }
+                )
+            )
             // 1
-            add(Monkey(
-                operation = { it + 2 },
-                test = { it.worryLevel.mod(19) == 0 },
-                action_true = { item -> this[7].catch(item) },
-                action_false = { item -> this[0].catch(item) },
-                71, 70, 79, 88, 56, 70
-            ))
+            add(
+                Monkey(
+                    index = 1,
+                    operation = { it + 2 },
+                    test_mod = { it.mod(19) },
+                    action_true = { item -> this[7].catch(item) },
+                    action_false = { item -> this[0].catch(item) },
+
+                    )
+            )
             // 2
-                    add(Monkey(
-                operation = { it + 7 },
-                test = { it.worryLevel.mod(7) == 0 },
-                action_true = { item -> this[4].catch(item) },
-                action_false = { item -> this[3].catch(item) },
-                98, 51, 51, 63, 80, 85, 84, 95
-            ))
+            add(
+                Monkey(
+                    index = 2,
+                    operation = { it + 7 },
+                    test_mod = { it.mod(7) },
+                    action_true = { item -> this[4].catch(item) },
+                    action_false = { item -> this[3].catch(item) },
+
+                    )
+            )
             // 3
-            add(Monkey(
-                operation = { it + 1 },
-                test = { it.worryLevel.mod(11) == 0 },
-                action_true = { item -> this[6].catch(item) },
-                action_false = { item -> this[4].catch(item) },
-                77, 90, 82, 80, 79
-            ))
+            add(
+                Monkey(
+                    index = 3,
+                    operation = { it + 1 },
+                    test_mod = { it.mod(11) },
+                    action_true = { item -> this[6].catch(item) },
+                    action_false = { item -> this[4].catch(item) },
+
+                    )
+            )
             // 4
-                    add(Monkey(
-                operation = { it * 5 },
-                test = { it.worryLevel.mod(13) == 0 },
-                action_true = { item -> this[6].catch(item) },
-                action_false = { item -> this[5].catch(item) },
-                68
-            ))
+            add(
+                Monkey(
+                    index = 4,
+                    operation = { it * 5 },
+                    test_mod = { it.mod(13) },
+                    action_true = { item -> this[6].catch(item) },
+                    action_false = { item -> this[5].catch(item) },
+
+                    )
+            )
             // 5
-                    add(Monkey(
-                operation = { it + 5 },
-                test = { it.worryLevel.mod(3) == 0 },
-                action_true = { item -> this[1].catch(item) },
-                action_false = { item -> this[0].catch(item) },
-                60, 94
-            ))
+            add(
+                Monkey(
+                    index = 5,
+                    operation = { it + 5 },
+                    test_mod = { it.mod(3) },
+                    action_true = { item -> this[1].catch(item) },
+                    action_false = { item -> this[0].catch(item) },
+
+                    )
+            )
             //6
-            add(Monkey(
-                operation = { it * it },
-                test = { it.worryLevel.mod(5) == 0 },
-                action_true = { item -> this[5].catch(item) },
-                action_false = { item -> this[1].catch(item) },
-                81, 51, 85
-            ))
+            add(
+                Monkey(
+                    index = 6,
+                    operation = { it * it },
+                    test_mod = { it.mod(5) },
+                    action_true = { item -> this[5].catch(item) },
+                    action_false = { item -> this[1].catch(item) },
+
+                    )
+            )
             // 7
-            add(Monkey(
-                operation = { it + 3 },
-                test = { it.worryLevel.mod(2) == 0 },
-                action_true = { item -> this[2].catch(item) },
-                action_false = { item -> this[3].catch(item) },
-                98, 81, 63, 65, 84, 71, 84
-            ))
+            add(
+                Monkey(
+                    index = 7,
+                    operation = { it + 3 },
+                    test_mod = { it.mod(2) },
+                    action_true = { item -> this[2].catch(item) },
+                    action_false = { item -> this[3].catch(item) },
+
+                    )
+            )
+
+
+            this[0].addInitialItems(this, 83, 97, 95, 67)
+            this[1].addInitialItems(this, 71, 70, 79, 88, 56, 70)
+            this[2].addInitialItems(this, 98, 51, 51, 63, 80, 85, 84, 95)
+            this[3].addInitialItems(this, 77, 90, 82, 80, 79)
+            this[4].addInitialItems(this, 68)
+            this[5].addInitialItems(this, 60, 94)
+            this[6].addInitialItems(this, 81, 51, 85)
+            this[7].addInitialItems(this, 98, 81, 63, 65, 84, 71, 84)
+
         }
 
-    fun partOne(): Int {
+    fun partOne(): BigInteger {
         val mks = monkeys
         (0 until 20).forEach { round ->
             mks.forEach { monkey ->
-                monkey.round()
+                monkey.round(worryLevelDivider = 3)
             }
         }
 
@@ -176,8 +204,17 @@ class Day11 {
         return mksTop.first().inspectedItemCount * mksTop.last().inspectedItemCount
     }
 
-    fun partTwo(): Int {
-        return 0
+    fun partTwo(): BigInteger {
+        val mks = monkeys
+        (0 until 10_000).forEach { round ->
+            mks.forEach { monkey ->
+                monkey.round(worryLevelDivider = 1)
+            }
+        }
+
+        val mksTop = mks.sortedByDescending { it.inspectedItemCount }
+            .take(2)
+        return mksTop.first().inspectedItemCount * mksTop.last().inspectedItemCount
     }
 
 }
