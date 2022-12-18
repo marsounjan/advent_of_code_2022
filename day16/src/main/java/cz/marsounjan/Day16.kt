@@ -1,7 +1,6 @@
 package cz.marsounjan
 
 import java.io.File
-import java.lang.RuntimeException
 import java.nio.charset.StandardCharsets.UTF_8
 
 class Day16 {
@@ -23,7 +22,7 @@ class Day16 {
     data class ValveSystem(
         val minute: Int,
         val valves: List<Valve>,
-        var position: Valve,
+        var positions: List<Valve>,
         val releasedPressure: Int
     ) {
         fun shiftTimeByMinute(min: Int = 1): ValveSystem {
@@ -31,14 +30,14 @@ class Day16 {
             return ValveSystem(
                 minute = minute + min,
                 valves = newValves,
-                position = newValves.find { it.name == position.name }!!,
+                positions = positions.map { pos -> newValves.find { it.name == pos.name }!! },
                 releasedPressure = releasedPressure + valves.sumOf { if (it.open) it.flowRate else 0 } * min
             )
         }
 
     }
 
-    fun getInitialValveSystem(initialValve: String): ValveSystem {
+    fun getInitialValveSystem(vararg initialValve: String): ValveSystem {
         val valves = puzzleInputString.lines()
             .map { inputLineRegex.find(it)!! }
             .map { result ->
@@ -57,7 +56,7 @@ class Day16 {
         return ValveSystem(
             minute = 0,
             valves = valves,
-            position = valves.find { it.name == initialValve }!!,
+            positions = initialValve.map { name -> valves.find { it.name == name }!! },
             releasedPressure = 0,
         )
     }
@@ -73,8 +72,7 @@ class Day16 {
             get() {
                 var result = 31 * minute
                 result = 31 * result + valves.hashCode()
-                result = 31 * result + position.hashCode()
-                //result = 31 * result + releasedPressure.hashCode()
+                result = 31 * result + positions.hashCode()
                 return result
             }
 
@@ -119,24 +117,60 @@ class Day16 {
         if (this.minute >= minutes) {
             return this
         }
-
         val options = mutableListOf<ValveSystem>()
-        //try open valve if not open
-        if (!this.position.open && this.position.flowRate > 0) {
-            options.add(
-                shiftTimeByMinute().apply {
-                    position.open = true
+        if(positions.size == 2){
+            if(valves.any { !it.open }){
+                val possibleMoves = lazyCartesian(positions[0].tunnels + positions[0].name, positions[1].tunnels + positions[1].name)
+                var tempSystem  : ValveSystem
+                var valveA : Valve
+                var valveB : Valve
+                possibleMoves.forEach { (valveAName, valveBName) ->
+                    var skip = false
+                    tempSystem = shiftTimeByMinute().apply {
+                        valveA = valves.find { it.name == valveAName }!!
+                        if(valveA.name == positions[0].name || valveA.name == positions[1].name){
+                            if(!valveA.open){
+                                valveA.open = true
+                            } else{
+                                skip = true
+                            }
+                        }
+                        valveB = valves.find { it.name == valveBName }!!
+                        if(valveB.name == positions[0].name || valveB.name == positions[1].name){
+                            if(!valveB.open){
+                                valveB.open = true
+                            } else{
+                                skip = true
+                            }
+                        }
+                        positions = listOf(valveA, valveB).sortedBy { it.name }
+                    }
+                    if(!skip){
+                        options.add(tempSystem)
+                    }
                 }
-            )
-        }
-        //try all routes
-        this.position.tunnels.forEach { tunnelName ->
-            options.add(
-                shiftTimeByMinute().apply {
-                    val newValve = valves.find { it.name == tunnelName }!!
-                    position = newValve
-                }
-            )
+            } else {
+                options.add(shiftTimeByMinute())
+            }
+        } else {
+            val p = positions[0]
+            //try open valve if not open
+            if (!p.open && p.flowRate > 0) {
+                options.add(
+                    shiftTimeByMinute().apply {
+                        positions[0].open = true
+                    }
+                )
+            }
+            //try all routes
+            p.tunnels.forEach { tunnelName ->
+                options.add(
+                    shiftTimeByMinute().apply {
+                        val newValve = valves.find { it.name == tunnelName }!!
+                        positions = listOf(newValve)
+                    }
+                )
+            }
         }
 
         val bestRoute = options
@@ -153,18 +187,30 @@ class Day16 {
     }
 
     fun partOne(): Int {
-        val system = getInitialValveSystem(initialValve = "AA")
+        val system = getInitialValveSystem("AA")
         val cache = Cache()
         val bestPressure = system.findBestPressure(minutes = 30, cache)
         return bestPressure!!.releasedPressure
     }
 
     fun partTwo(): Int {
-        val system = getInitialValveSystem(initialValve = "AA")
+        val system = getInitialValveSystem("AA", "AA")
         val cache = Cache()
         val bestPressure = system.findBestPressure(minutes = 26, cache)
         return bestPressure!!.releasedPressure
     }
+
+    private fun <A, B> lazyCartesian(
+        listA: Iterable<A>,
+        listB: Iterable<B>
+    ): Sequence<Pair<A, B>> =
+        sequence {
+            listA.forEach { a ->
+                listB.forEach { b ->
+                    yield(a to b)
+                }
+            }
+        }
 
 }
 
